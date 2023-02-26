@@ -41,7 +41,8 @@ def update(rng: PRNGKey, actor: Model, critic: Model, target_critic: Model,
         qs = critic.apply_fn({'params': critic_params}, batch.observations,
                              batch.actions)
         critic_loss = ((qs - target_q)**2).mean()
-        return critic_loss, {'critic_loss': critic_loss, 'qs': qs.mean()}
+        q_std = jnp.std(qs,axis=1).mean()
+        return critic_loss, {'critic_loss': critic_loss, 'qs': qs.mean(), 'qstd': q_std}
 
     new_critic, info = critic.apply_gradient(critic_loss_fn)
 
