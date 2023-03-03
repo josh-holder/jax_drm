@@ -13,12 +13,16 @@ def update(key: PRNGKey, actor: Model, critic: Model, temp: Model,
         dist = actor.apply_fn({'params': actor_params}, batch.observations)
         actions = dist.sample(seed=key)
         log_probs = dist.log_prob(actions)
-        qs = critic(batch.observations, actions)
+        qs = critic(batch.observations, actions) #(n,batch_size array)
         q = jnp.mean(qs, 0)
+        qstd = jnp.std(qs, 0)
+        qstd_avg = qstd.mean()
+
         actor_loss = (log_probs * temp() - q).mean()
         return actor_loss, {
             'actor_loss': actor_loss,
-            'entropy': -log_probs.mean()
+            'entropy': -log_probs.mean(),
+            'actor_q_std': qstd_avg,
         }
 
     new_actor, info = actor.apply_gradient(actor_loss_fn)
