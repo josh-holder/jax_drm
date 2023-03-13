@@ -13,6 +13,7 @@ from jaxrl.agents import (AWACLearner, DDPGLearner, REDQLearner, SACLearner,
 from jaxrl.datasets import ReplayBuffer
 from jaxrl.evaluation import evaluate
 from jaxrl.utils import make_env
+import jax.numpy as jnp
 
 FLAGS = flags.FLAGS
 
@@ -104,6 +105,8 @@ def main(_):
     replay_buffer = ReplayBuffer(env.observation_space, env.action_space,
                                  replay_buffer_size or FLAGS.max_steps)
 
+    print(replay_buffer.size)
+
     eval_returns = []
     observation, done = env.reset(), False
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1),
@@ -114,6 +117,13 @@ def main(_):
         else:
             action = agent.sample_actions(observation)
         next_observation, reward, done, info = env.step(action)
+
+        qs = agent.critic(observation, action)
+        qstd = jnp.std(qs,0)
+
+        if i % 50 == 0:
+            summary_writer.add_scalar("training/qs_selected",qstd,i)
+            summary_writer.flush()
 
         if not done or 'TimeLimit.truncated' in info:
             mask = 1.0
@@ -135,6 +145,7 @@ def main(_):
                                           info['total']['timesteps'])
 
         if i >= FLAGS.start_training:
+            print(f"Replay buffer SIZE {replay_buffer.capacity}")
             for _ in range(FLAGS.updates_per_step):
                 batch = replay_buffer.sample(FLAGS.batch_size)
                 update_info = agent.update(batch)

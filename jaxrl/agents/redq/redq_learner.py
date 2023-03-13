@@ -133,6 +133,7 @@ class REDQLearner(object):
         self.rng = rng
 
         self.step = 0
+        self.max_q_std = 0
 
     def sample_actions(self,
                        observations: np.ndarray,
@@ -169,5 +170,7 @@ class REDQLearner(object):
         self.critic = new_critic
         self.target_critic = new_target_critic
         self.temp = new_temp
+
+        self.max_q_std = info['max_q_std']
 
         return info

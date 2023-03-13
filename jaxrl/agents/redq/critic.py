@@ -17,7 +17,7 @@ def target_update(critic: Model, target_critic: Model, tau: float) -> Model:
 
 def update(rng: PRNGKey, actor: Model, critic: Model, target_critic: Model,
            temp: Model, batch: Batch, discount: float, backup_entropy: bool,
-           n: int, m: int) -> Tuple[Model, InfoDict]:
+           n: int, m: int, max_q_std: float) -> Tuple[Model, InfoDict]:
     dist = actor(batch.next_observations)
     rng, key = jax.random.split(rng)
     next_actions = dist.sample(seed=key)
@@ -37,12 +37,15 @@ def update(rng: PRNGKey, actor: Model, critic: Model, target_critic: Model,
     if backup_entropy:
         target_q -= discount * batch.masks * temp() * next_log_probs
 
+
     def critic_loss_fn(critic_params: Params) -> Tuple[jnp.ndarray, InfoDict]:
         qs = critic.apply_fn({'params': critic_params}, batch.observations,
                              batch.actions)
         critic_loss = ((qs - target_q)**2).mean()
         q_std = jnp.std(qs,axis=0).mean()
-        return critic_loss, {'critic_loss': critic_loss, 'qs': qs.mean(), 'qstd': q_std}
+        if q_std > max_q_std:
+            max_q_std = q_std
+        return critic_loss, {'critic_loss': critic_loss, 'qs': qs.mean(), 'q_scale': q_std/max_q_std, 'max_q_std': max_q_std}
 
     new_critic, info = critic.apply_gradient(critic_loss_fn)
 
