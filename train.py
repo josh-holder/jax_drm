@@ -33,6 +33,7 @@ flags.DEFINE_boolean('tqdm', True, 'Use tqdm progress bar.')
 flags.DEFINE_boolean('save_video', False, 'Save videos during evaluation.')
 flags.DEFINE_boolean('track', False, 'Track experiments with Weights and Biases.')
 flags.DEFINE_string('wandb_project_name', "JAX DRM", "The wandb's project name.")
+flags.DEFINE_string('wandb_run_name', None, "the name of the wandb run")
 flags.DEFINE_string('wandb_entity', None, "the entity (team) of wandb's project")
 config_flags.DEFINE_config_file(
     'config',
@@ -44,7 +45,10 @@ config_flags.DEFINE_config_file(
 def main(_):
     kwargs = dict(FLAGS.config)
     algo = kwargs.pop('algo')
-    run_name = f"{FLAGS.env_name}__{algo}__{FLAGS.seed}__{int(time.time())}"
+    if kwargs['wandb_run_name'] != None:
+        run_name = kwargs['wandb_run_name']
+    else:
+        run_name = f"{FLAGS.env_name}__{algo}__{FLAGS.seed}__{int(time.time())}"
     if FLAGS.track:
         import wandb
 
