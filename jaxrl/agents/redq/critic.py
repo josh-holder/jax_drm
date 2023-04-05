@@ -6,6 +6,7 @@ import jax.numpy as jnp
 from jaxrl.datasets import Batch
 from jaxrl.networks.common import InfoDict, Model, Params, PRNGKey
 
+from jaxrl.car_reward_shaping import car_reward_shaping as calc_shaping_rewards
 
 def target_update(critic: Model, target_critic: Model, tau: float) -> Model:
     new_target_params = jax.tree_multimap(
@@ -31,6 +32,9 @@ def update(rng: PRNGKey, actor: Model, critic: Model, target_critic: Model,
     next_qs = target_critic.apply_fn({'params': params},
                                      batch.next_observations, next_actions)
     next_q = jnp.min(next_qs, axis=0)
+
+    shaping_rewards = calc_shaping_rewards(batch.observations, batch.actions)
+    print(shaping_rewards.shape)
 
     target_q = batch.rewards + discount * batch.masks * next_q
 
